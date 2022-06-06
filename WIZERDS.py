@@ -1,3 +1,4 @@
+from random import random
 import pygame, math, time
 
 from pygame import mouse
@@ -115,20 +116,23 @@ class Menu:
                 line = self.font.render(self.content[a][i],True,self.textColor)
                 screen.blit(line,(self.offset[0]+self.margins[a][i][0],self.offset[1]+self.margins[a][i][1]))
 statsMenu = Menu([10,10],[140,200],content=[[None,None,None],[None,None,None]],margins=[[[3,3],[3,30],[3,60]],[[70,3],[70,30],[70,60]]])
-movesMenu = Menu([10,SCREENSIZE[1]-200],[SCREENSIZE[0]-20,190], content=[[None],[None]], margins=[[[3,3]],[[3,30]]])
+movesMenu = Menu([10,SCREENSIZE[1]-200],[SCREENSIZE[0]-20,190], content=[[None,None,None,None]], margins=[[[3,3],[3,33],[3,63],[3,93]]])
 
 class Space:
-    def __init__(self,pos,typ,item=None,effects=[None]):
+    def __init__(self,pos,type,item=None,effects=[None]):
         self.pos = pos
-        self.type = typ
         self.item = item
         self.effects = []
-        if typ == "Grass":
+        self.set_type(type)
+    def set_type(self,type):
+        self.type = type
+        if type == "Grass":
             self.color = (0,170,0)
-        if typ == "Trees":
+        if type == "Trees":
             self.color = (0,70,0)
-        if typ == "Water":
+        if type == "Water":
             self.color = (0,200,230)
+
 
 
 class Selector:
@@ -161,7 +165,11 @@ class Selector:
         #---update menus and game options according to cursor
         statsMenu.content[0][0] = "Player: " + str(turn)
         if (self.space.item):
-            movesMenu.content[0][0] = self.space.item.description
+            for line in range(len(self.space.item.description)):
+                if line >= len(movesMenu.content[0]):
+                    movesMenu.content[0].append(self.space.item.description[line])
+                else: 
+                    movesMenu.content[0][line] = self.space.item.description[line]
         if self.space != None:
             statsMenu.content[0][1] = str(self.space.pos)
             statsMenu.content[1][1] = self.space.type
@@ -272,7 +280,9 @@ class Ghost(Piece):
     def __init__(self,space, player):
         self.name = "Ghost"
         self.img = pygame.image.load('images/ghost1.png')
-        self.description = "The Ghost is insane! It can move in any direction as far as you like. \n A lot like the queen in chess, but more spooky... \n Be careful! Ghost can no go over water."
+        self.description = ["The Ghost is insane! It can move in any direction as far as you like.",
+                    "A lot like the queen in chess, but more spooky...",
+                  "Be careful! Ghost can not go over water."]
         Piece.__init__(self,space,player)
     def getMoves(self):
         moves = []
@@ -299,7 +309,9 @@ class Ghost(Piece):
 class Wizard(Piece):
     def __init__(self,space, player):
         self.name = "Wizard"
-        self.description = "wizard"
+        self.description = ["The wizard is kind of like the Knight in Chess...",
+        "...but it can jump much farther.",
+         "So watch out! Becuase it can hop over players and water."]
         self.img = pygame.image.load('images/player1-sprite.png')
         Piece.__init__(self,space,player)
     def getMoves(self):
@@ -329,7 +341,9 @@ class Skeleton(Piece):
     def __init__(self,space,player):
         self.name = "Skeleton"
         self.img = pygame.image.load('images/player2-sprite.png')
-        self.description = "skeleton"
+        self.description = ["The skeleton is like the Knight in Chess",
+        "It can hop over players...",
+        "...but with limited range"]
         Piece.__init__(self,space,player)
     def getMoves(self):
         moves = []
@@ -358,7 +372,9 @@ class Undead(Piece):
     def __init__(self,space,player):
         self.name = "Undead"
         self.img = pygame.image.load('images/player3-sprite.png')
-        self.description = "undead boul"
+        self.description = ["The undead is just your basic average piece.",
+        "It can move two spaces in any direction.",
+        "But don't underestimate him or you'll regret it"]
         Piece.__init__(self,space,player)
     def getMoves(self):
         moves = []
@@ -368,11 +384,12 @@ class Undead(Piece):
                 spacePos = step(spacePos,d)
                 try:
                     Space = Board[str(spacePos)]
-                    if Space.type != WATER:
-                        if Space.item == None:
-                            moves.append({"space": spacePos, "type": "change pos"})
-                        elif Space.item.player != self.player:
-                            moves.append({"space": spacePos, "type": "take piece"})
+                    if Space.type == WATER or(Space.item != None and Space.item.player == turn):
+                        break
+                    if Space.item == None:
+                        moves.append({"space": spacePos, "type": "change pos"})
+                    elif Space.item.player != self.player:
+                        moves.append({"space": spacePos, "type": "take piece"})
                 except:
                     pass
         return moves
@@ -420,7 +437,17 @@ def draw_all():
     draw_board()
     draw_menus()
 
-
+def populate_water(num=6):
+    for a in range(num):
+        x = round(random()*(BOARDSIZE[0]-1))
+        y = round(random()*(BOARDSIZE[1]-1))
+        space = Board[str((x,y))]
+        while (space.item != None and space.type != WATER):
+            x = round(random()*(BOARDSIZE[0]-1))
+            y = round(random()*(BOARDSIZE[1]-1))
+            space = Board[str((x,y))]
+        print(a,str((x,y)))
+        space.set_type(WATER)
 
 
 testPiece = Ghost((4,8), 1)
@@ -429,10 +456,14 @@ testWizard = Wizard((4,7),1)
 testWizard = Wizard((4,1),2)
 testSkeleton = Skeleton((5,7),1)
 testSkeleton = Skeleton((5,1),2)
-testUndead1 = Undead((4,6),1)
-testUndead2 = Undead((5,6),1)
-testUndead3 = Undead((4,2),2)
-testUndead4 = Undead((5,2),2)
+testUndead11 = Undead((3,6),1)
+testUndead12 = Undead((4,6),1)
+testUndead13 = Undead((5,6),1)
+testUndead21 = Undead((3,2),2)
+testUndead22 = Undead((4,2),2)
+testUndead23 = Undead((5,2),2)
+
+populate_water(14)
 done = False
 mouse_ref = False
 draw_all()
@@ -505,5 +536,5 @@ while not done:
         pygame.display.update()
     else:
         print("player ", str(WINNER), "wins!!!")
-        time.sleep(10)
+        done = True
 pygame.quit()
